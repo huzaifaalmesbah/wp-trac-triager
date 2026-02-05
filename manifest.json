@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "WP Trac Triager",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Enhance WordPress Trac ticket triage with visual highlights, keyword explanations, and component maintainer info",
   "permissions": [
     "storage"
@@ -19,6 +19,7 @@
       "js": [
         "data/keyword-data.js",
         "data/maintainers-data.js",
+        "data/release-schedule.js",
         "content/trac-sidebar.js"
       ],
       "css": [

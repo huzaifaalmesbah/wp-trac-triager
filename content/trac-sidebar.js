@@ -207,6 +207,7 @@ function getTicketSummary() {
   // Type - from span.trac-type
   const typeElement = document.querySelector('.trac-type a');
   summary.type = typeElement ? typeElement.textContent.trim() : '';
+  summary.typeUrl = typeElement ? typeElement.href : null;
 
   // Reporter (with link) - use a.trac-author in the reporter cell
   const reporterLink = document.querySelector('#ticket td[headers="h_reporter"] a.trac-author');
@@ -708,9 +709,37 @@ function createKeywordSidebar(contributorData = {}) {
     box-shadow: 0 2px 4px rgba(0,0,0,0.05);
   `;
 
+  // Add "View Description" link at the top
+  const viewDescLink = document.createElement('a');
+  viewDescLink.href = '#ticket';
+  viewDescLink.textContent = '↑ View Full Description';
+  viewDescLink.style.cssText = `
+    display: block;
+    font-size: 12px;
+    color: #2271b1;
+    text-decoration: none;
+    font-weight: 600;
+    margin-bottom: 12px;
+    padding: 8px;
+    background: #e7f3ff;
+    border-radius: 4px;
+    text-align: center;
+    transition: background 0.2s;
+  `;
+  viewDescLink.onmouseover = () => {
+    viewDescLink.style.background = '#d0e7ff';
+    viewDescLink.style.textDecoration = 'underline';
+  };
+  viewDescLink.onmouseout = () => {
+    viewDescLink.style.background = '#e7f3ff';
+    viewDescLink.style.textDecoration = 'none';
+  };
+  summaryBox.appendChild(viewDescLink);
+
   // Create summary grid
   const summaryItems = [
-    { label: 'Status', value: ticketSummary.status || 'Unknown', required: true },
+    { label: 'Status', value: ticketSummary.status || 'Unknown', url: ticketSummary.statusUrl, required: true },
+    { label: 'Type', value: ticketSummary.type || 'Unknown', url: ticketSummary.typeUrl, required: true },
     { label: 'Reporter', value: ticketSummary.reporter || 'Unknown', url: ticketSummary.reporterUrl, required: true },
     { label: 'Owner', value: ticketSummary.owner || 'Unowned', url: ticketSummary.ownerUrl },
     { label: 'Opened', value: ticketSummary.opened },
@@ -810,6 +839,153 @@ function createKeywordSidebar(contributorData = {}) {
 
   summarySection.contentWrapper.appendChild(summaryBox);
   content.appendChild(summarySection.container);
+
+  // Add WordPress release schedule section
+  chrome.storage.sync.get(['config'], function(result) {
+    const config = result.config || {};
+    const targetVersion = config.targetWpVersion || '7.0'; // Default to 7.0
+
+    if (typeof WP_RELEASE_SCHEDULES !== 'undefined' && WP_RELEASE_SCHEDULES[targetVersion]) {
+      const schedule = WP_RELEASE_SCHEDULES[targetVersion];
+      const nextMilestone = getNextMilestone(targetVersion);
+
+      const releaseSection = createCollapsibleSection('release-schedule', `WordPress ${targetVersion} Release`, '📅', true);
+
+      const releaseBox = document.createElement('div');
+      releaseBox.style.cssText = `
+        padding: 12px;
+        background: #f0f4ff;
+        border-left: 3px solid #4f46e5;
+        border-radius: 4px;
+      `;
+
+      // Final release date
+      const finalReleaseDiv = document.createElement('div');
+      finalReleaseDiv.style.cssText = `
+        font-size: 12px;
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #d0d7ff;
+      `;
+
+      const finalLabel = document.createElement('div');
+      finalLabel.style.cssText = `
+        color: #6b7280;
+        font-weight: 500;
+        margin-bottom: 4px;
+      `;
+      finalLabel.textContent = 'Stable Release:';
+
+      const finalValue = document.createElement('div');
+      finalValue.style.cssText = `
+        color: #4f46e5;
+        font-weight: 700;
+        font-size: 13px;
+      `;
+      finalValue.textContent = formatDate(schedule.finalRelease);
+
+      finalReleaseDiv.appendChild(finalLabel);
+      finalReleaseDiv.appendChild(finalValue);
+      releaseBox.appendChild(finalReleaseDiv);
+
+      // Next milestone
+      if (nextMilestone) {
+        const days = daysUntil(nextMilestone.date);
+
+        const nextMilestoneDiv = document.createElement('div');
+        nextMilestoneDiv.style.cssText = `
+          font-size: 12px;
+        `;
+
+        const nextLabel = document.createElement('div');
+        nextLabel.style.cssText = `
+          color: #6b7280;
+          font-weight: 500;
+          margin-bottom: 4px;
+        `;
+        nextLabel.textContent = 'Next Release:';
+
+        const nextValue = document.createElement('div');
+        nextValue.style.cssText = `
+          color: #1f2937;
+          font-weight: 600;
+          font-size: 13px;
+        `;
+
+        let daysText;
+        if (days === 0) {
+          daysText = 'Today';
+        } else if (days === 1) {
+          daysText = 'Tomorrow';
+        } else if (days < 0) {
+          daysText = `${Math.abs(days)} days ago`;
+        } else {
+          daysText = `in ${days} days`;
+        }
+
+        nextValue.innerHTML = `<strong>${nextMilestone.name}</strong> — ${formatDate(nextMilestone.date)} <span style="color: #6b7280; font-weight: 500;">(${daysText})</span>`;
+
+        nextMilestoneDiv.appendChild(nextLabel);
+        nextMilestoneDiv.appendChild(nextValue);
+        releaseBox.appendChild(nextMilestoneDiv);
+      } else {
+        // All milestones passed
+        const completedDiv = document.createElement('div');
+        completedDiv.style.cssText = `
+          font-size: 12px;
+          color: #059669;
+          font-weight: 600;
+        `;
+        completedDiv.textContent = '✓ All milestones completed';
+        releaseBox.appendChild(completedDiv);
+      }
+
+      // Add links section
+      const linksDiv = document.createElement('div');
+      linksDiv.style.cssText = `
+        margin-top: 12px;
+        padding-top: 10px;
+        border-top: 1px solid #d0d7ff;
+        font-size: 11px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      `;
+
+      // Release page link
+      const releasePageLink = document.createElement('a');
+      releasePageLink.href = schedule.releasePageUrl;
+      releasePageLink.target = '_blank';
+      releasePageLink.textContent = '📋 Release Roadmap';
+      releasePageLink.style.cssText = `
+        color: #4f46e5;
+        text-decoration: none;
+        font-weight: 500;
+      `;
+      releasePageLink.onmouseover = () => releasePageLink.style.textDecoration = 'underline';
+      releasePageLink.onmouseout = () => releasePageLink.style.textDecoration = 'none';
+
+      // Release squad link
+      const releaseSquadLink = document.createElement('a');
+      releaseSquadLink.href = schedule.releaseSquadUrl;
+      releaseSquadLink.target = '_blank';
+      releaseSquadLink.textContent = '👥 Release Squad';
+      releaseSquadLink.style.cssText = `
+        color: #4f46e5;
+        text-decoration: none;
+        font-weight: 500;
+      `;
+      releaseSquadLink.onmouseover = () => releaseSquadLink.style.textDecoration = 'underline';
+      releaseSquadLink.onmouseout = () => releaseSquadLink.style.textDecoration = 'none';
+
+      linksDiv.appendChild(releasePageLink);
+      linksDiv.appendChild(releaseSquadLink);
+      releaseBox.appendChild(linksDiv);
+
+      releaseSection.contentWrapper.appendChild(releaseBox);
+      content.appendChild(releaseSection.container);
+    }
+  });
 
   // Add recent comments section
   const recentComments = getRecentComments(3, contributorData);

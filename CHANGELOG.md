@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-02-05
+
+### Added
+- **WordPress Release Schedule Tracker**: New section showing the target WordPress release schedule with next milestone and days remaining
+- **Collapsible Sections**: All sidebar sections (Quick Info, Recent Comments, Component Maintainers, TRAC Keywords) can now be collapsed/expanded with persistent state
+- Release schedule configuration in settings page to select target WordPress version
+- Release schedule data for WordPress 7.0 including all beta, RC, and final release dates
+
+### Technical
+- Added `data/release-schedule.js` with WordPress 7.0 milestone dates
+- Collapsible section helper function with localStorage state persistence
+- Chrome storage integration for release version preferences
+
 ## [1.1.0] - 2026-02-05
 
 ### Added

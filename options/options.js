@@ -4,6 +4,7 @@ const defaultConfig = {
   highlightComments: true,
   showKeywordSidebar: true,
   showMaintainerInfo: true,
+  targetWpVersion: '7.0',
   customUsers: {
     coreCommitters: [],
     leadTesters: []
@@ -19,6 +20,9 @@ function loadSettings() {
     document.getElementById('highlightComments').checked = config.highlightComments;
     document.getElementById('showKeywordSidebar').checked = config.showKeywordSidebar;
     document.getElementById('showMaintainerInfo').checked = config.showMaintainerInfo;
+
+    // Set target WordPress version
+    document.getElementById('targetWpVersion').value = config.targetWpVersion || '7.0';
 
     // Set custom user lists
     if (config.customUsers) {
@@ -36,6 +40,7 @@ function saveSettings() {
     highlightComments: document.getElementById('highlightComments').checked,
     showKeywordSidebar: document.getElementById('showKeywordSidebar').checked,
     showMaintainerInfo: document.getElementById('showMaintainerInfo').checked,
+    targetWpVersion: document.getElementById('targetWpVersion').value,
     customUsers: {
       coreCommitters: parseUserList(document.getElementById('customCoreCommitters').value),
       leadTesters: parseUserList(document.getElementById('customLeadTesters').value)
