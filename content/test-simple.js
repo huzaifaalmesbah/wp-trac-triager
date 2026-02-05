@@ -1,5 +1,22 @@
 // Content script - runs in isolated context
-console.log('🚀 WP Trac Triager Content Script LOADED!');
+
+// Debug mode - only logs if URL contains ?wpt_debug
+const DEBUG = false; // Set to true or use ?wpt_debug URL parameter for debugging
+const urlDebug = window.location.search.includes('wpt_debug');
+function debug(...args) {
+  if (DEBUG || urlDebug) console.log('[WP Trac Triager]', ...args);
+}
+
+// Visual indicator that extension loaded (temporary)
+if (DEBUG) {
+  const indicator = document.createElement('div');
+  indicator.textContent = '✅ WP Trac Triager Loaded';
+  indicator.style.cssText = 'position:fixed;top:10px;left:10px;background:#4CAF50;color:white;padding:8px 16px;border-radius:4px;z-index:99999;font-size:12px;font-family:sans-serif;';
+  setTimeout(() => document.body.appendChild(indicator), 1000);
+  setTimeout(() => indicator.remove(), 3000);
+}
+
+debug('Extension initialized');
 
 // Step 1: Inject script into page context
 function injectPageScript() {
@@ -9,28 +26,27 @@ function injectPageScript() {
     this.remove();
   };
   (document.head || document.documentElement).appendChild(script);
-  console.log('💉 Injected page script');
 }
 
 // Step 2: Listen for data from injected script
 document.addEventListener('wpt-data-ready', function() {
-  console.log('📨 Received data ready event!');
-
   const dataElement = document.getElementById('wpt-contributor-data');
   if (dataElement) {
-    const contributorData = JSON.parse(dataElement.getAttribute('data-contributors'));
-    console.log('✅ Got contributor data:', Object.keys(contributorData).length, 'users');
-
-    highlightContributors(contributorData);
+    try {
+      const contributorData = JSON.parse(dataElement.getAttribute('data-contributors'));
+      debug('Got contributor data:', Object.keys(contributorData).length, 'users');
+      highlightContributors(contributorData);
+    } catch (error) {
+      debug('Error parsing contributor data:', error);
+    }
   } else {
-    console.error('❌ Data element not found');
+    debug('No contributor data element found');
   }
 });
 
 // Step 3: Highlight contributors with role-specific colors
 function highlightContributors(wpTracContributorLabels) {
   const comments = document.querySelectorAll('.change');
-  console.log('✅ Found', comments.length, 'comments');
 
   // Color scheme for different roles
   const roleColors = {
@@ -53,8 +69,6 @@ function highlightContributors(wpTracContributorLabels) {
       if (wpTracContributorLabels[username]) {
         const role = wpTracContributorLabels[username];
         const colors = roleColors[role] || roleColors['default'];
-
-        console.log('⭐ HIGHLIGHTING:', username, '-', role, colors);
 
         // Add visual highlight - ONLY to the parent div.change, not h3.change
         comment.style.borderLeft = `4px solid ${colors.border}`;
@@ -111,22 +125,18 @@ function highlightContributors(wpTracContributorLabels) {
       }
     }
   });
-
-  console.log('✅ Highlighted', highlightedCount, 'comments!');
 }
 
 // Helper: Get component maintainer information
 function getComponentMaintainerInfo() {
   // Check if maintainer data is available
   if (typeof COMPONENT_MAINTAINERS === 'undefined' || typeof MAINTAINER_PROFILES === 'undefined') {
-    console.warn('[WP Trac Triager] Maintainer data not loaded');
     return null;
   }
 
   // Get the component from the ticket
   const componentElement = document.querySelector('#ticket td[headers="h_component"]');
   if (!componentElement) {
-    console.warn('[WP Trac Triager] Component field not found');
     return null;
   }
 
@@ -265,7 +275,6 @@ function getRecentComments(count = 3, contributorData = {}) {
       }
     }
 
-    console.log(`Comment #${commentNumber}: author="${author}", hasRole=${!!contributorData[author]}`);
 
     // Check if author has a role
     let role = null;
@@ -359,42 +368,37 @@ function extractKeywordHistory() {
 
 // Step 4: Create keyword sidebar
 function createKeywordSidebar(contributorData = {}) {
-  console.log('🔑 Creating keyword sidebar...');
+  debug('Creating keyword sidebar...');
 
   // Check if data is available
   if (typeof KEYWORD_DATA === 'undefined') {
-    console.error('❌ KEYWORD_DATA not available');
-    console.log('Available globals:', Object.keys(window).filter(k => k.includes('KEYWORD')));
+    debug('ERROR: KEYWORD_DATA not available');
     return;
   }
-  console.log('✅ KEYWORD_DATA loaded:', Object.keys(KEYWORD_DATA).length, 'keywords');
+  debug('KEYWORD_DATA available');
 
   // Get keywords from the ticket
   // Note: The td doesn't have class="keywords", it has headers="h_keywords"
   const keywordsElement = document.querySelector('#ticket td[headers="h_keywords"]');
-  console.log('Looking for keywords in:', keywordsElement);
 
   if (!keywordsElement) {
-    console.error('❌ No keywords field found with selector: td[headers="h_keywords"]');
+    debug('ERROR: Keywords element not found with selector: #ticket td[headers="h_keywords"]');
     return;
   }
+  debug('Found keywords element:', keywordsElement);
 
   const keywordText = keywordsElement.textContent.trim();
-  if (!keywordText) {
-    console.log('ℹ️ No keywords on this ticket');
-    return;
-  }
-
-  const keywords = keywordText.split(/\s+/).filter(k => k.length > 0);
-  console.log('📋 Found keywords:', keywords);
+  const keywords = keywordText ? keywordText.split(/\s+/).filter(k => k.length > 0) : [];
+  debug('Keywords extracted:', keywords.length, 'keywords');
 
   // Extract keyword history
   const keywordHistory = extractKeywordHistory();
-  console.log('📅 Keyword history:', keywordHistory);
+  debug('Keyword history extracted');
 
   // Create sidebar
   const sidebar = document.createElement('div');
   sidebar.id = 'wpt-keyword-sidebar';
+  debug('Sidebar element created');
 
   // Load saved position or use defaults
   const savedPosition = localStorage.getItem('wpt-sidebar-position');
@@ -566,6 +570,7 @@ function createKeywordSidebar(contributorData = {}) {
 
   // Add recent comments section
   const recentComments = getRecentComments(3, contributorData);
+  debug('Recent comments found:', recentComments.length);
   if (recentComments.length > 0) {
     const recentCommentsBox = document.createElement('div');
     recentCommentsBox.style.cssText = `
@@ -641,10 +646,12 @@ function createKeywordSidebar(contributorData = {}) {
     });
 
     content.appendChild(recentCommentsBox);
+    debug('Recent comments section added to content');
   }
 
   // Add component maintainer info
   const maintainerInfo = getComponentMaintainerInfo();
+  debug('Maintainer info:', maintainerInfo ? maintainerInfo.component : 'none');
   if (maintainerInfo) {
     const maintainerBox = document.createElement('div');
     maintainerBox.style.cssText = `
@@ -750,6 +757,7 @@ function createKeywordSidebar(contributorData = {}) {
     maintainerBox.appendChild(componentsLink);
 
     content.appendChild(maintainerBox);
+    debug('Maintainer section added to content');
   }
 
   // Add Keywords section header and context
@@ -775,10 +783,32 @@ function createKeywordSidebar(contributorData = {}) {
     margin-bottom: 12px;
     line-height: 1.5;
   `;
-  keywordsContext.innerHTML = `According to the keywords, the current state of this issue is:`;
+
+  if (keywords.length > 0) {
+    keywordsContext.innerHTML = `According to the keywords, the current state of this issue is:`;
+  } else {
+    keywordsContext.innerHTML = `This ticket has <strong>no keywords</strong> assigned yet. Keywords help categorize and track the status of tickets.`;
+  }
+
   keywordsHeader.appendChild(keywordsContext);
 
   content.appendChild(keywordsHeader);
+
+  // Show message if no keywords, otherwise list them
+  if (keywords.length === 0) {
+    const noKeywordsMsg = document.createElement('div');
+    noKeywordsMsg.style.cssText = `
+      margin-bottom: 16px;
+      padding: 12px;
+      background: #fff3cd;
+      border-left: 3px solid #ffc107;
+      border-radius: 4px;
+      font-size: 13px;
+      color: #856404;
+    `;
+    noKeywordsMsg.innerHTML = `<strong>ℹ️ No keywords found.</strong><br>Consider adding relevant keywords to help with triage and categorization.`;
+    content.appendChild(noKeywordsMsg);
+  }
 
   // Add each keyword
   keywords.forEach(keyword => {
@@ -874,8 +904,9 @@ function createKeywordSidebar(contributorData = {}) {
 
   // Append content to sidebar, then sidebar to body
   sidebar.appendChild(content);
+  debug('About to append sidebar to body. Sidebar HTML length:', sidebar.innerHTML.length);
   document.body.appendChild(sidebar);
-  console.log('✅ Keyword sidebar created!');
+  debug('Sidebar appended to body successfully!');
 }
 
 // Start the process
@@ -891,7 +922,6 @@ document.addEventListener('wpt-data-ready', function() {
     try {
       contributorData = JSON.parse(dataElement.getAttribute('data-contributors'));
     } catch (e) {
-      console.error('Error parsing contributor data:', e);
     }
   }
 

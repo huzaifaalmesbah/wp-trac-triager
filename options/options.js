@@ -47,12 +47,16 @@ function saveSettings() {
   });
 }
 
-// Parse user list from textarea
+// Parse user list from textarea with validation
 function parseUserList(text) {
   return text
     .split('\n')
     .map(line => line.trim())
-    .filter(line => line.length > 0);
+    .filter(line => line.length > 0)
+    .filter(line => {
+      // Validate username format (alphanumeric, hyphens, underscores only)
+      return /^[a-zA-Z0-9_-]+$/.test(line);
+    });
 }
 
 // Reset to defaults

@@ -1,0 +1,31 @@
+{
+  "name": "wp-trac-triager",
+  "version": "1.0.0",
+  "description": "Chrome extension to enhance WordPress Trac ticket triage workflow",
+  "scripts": {
+    "lint": "eslint content/**/*.js data/**/*.js options/**/*.js popup/**/*.js",
+    "lint:fix": "eslint --fix content/**/*.js data/**/*.js options/**/*.js popup/**/*.js",
+    "format": "prettier --write \"**/*.{js,json,css,md}\"",
+    "format:check": "prettier --check \"**/*.{js,json,css,md}\""
+  },
+  "keywords": [
+    "wordpress",
+    "trac",
+    "chrome-extension",
+    "browser-extension",
+    "productivity"
+  ],
+  "author": "Juan Manuel Garrido",
+  "license": "MIT",
+  "devDependencies": {
+    "eslint": "^8.50.0",
+    "prettier": "^3.0.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/wp-trac-triager.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/wp-trac-triager/issues"
+  }
+}
