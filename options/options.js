@@ -5,10 +5,11 @@ const defaultSidebarSections = [
   { id: 'release-schedule', icon: '📅', name: 'WordPress Release', description: 'Release milestones and schedule', enabled: true, order: 1 },
   { id: 'recent-comments', icon: '💬', name: 'Recent Comments', description: 'Last 3 comments on ticket', enabled: true, order: 2 },
   { id: 'milestone-timeline', icon: '📊', name: 'Milestone History', description: 'Timeline of milestone changes', enabled: true, order: 3 },
-  { id: 'authority-legend', icon: '👥', name: 'Authority Legend', description: 'Role distribution in comments', enabled: true, order: 4 },
-  { id: 'maintainers', icon: '🔧', name: 'Component Maintainers', description: 'Maintainer information', enabled: true, order: 5 },
-  { id: 'keyword-validation', icon: '⚠️', name: 'Keyword Validation', description: 'Validation warnings (conditional)', enabled: true, order: 6 },
-  { id: 'keywords', icon: '🏷️', name: 'TRAC Keywords', description: 'Keyword explanations', enabled: true, order: 7 }
+  { id: 'keyword-history', icon: '🔄', name: 'Keyword Change History', description: 'Timeline of keyword additions/removals', enabled: true, order: 4 },
+  { id: 'authority-legend', icon: '👥', name: 'Authority Legend', description: 'Role distribution in comments', enabled: true, order: 5 },
+  { id: 'maintainers', icon: '🔧', name: 'Component Maintainers', description: 'Maintainer information', enabled: true, order: 6 },
+  { id: 'keyword-validation', icon: '⚠️', name: 'Keyword Validation', description: 'Validation warnings (conditional)', enabled: true, order: 7 },
+  { id: 'keywords', icon: '🏷️', name: 'TRAC Keywords', description: 'Keyword explanations', enabled: true, order: 8 }
 ];
 
 const defaultConfig = {

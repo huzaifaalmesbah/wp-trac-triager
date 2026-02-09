@@ -509,18 +509,25 @@ function extractKeywordHistory() {
 
   changes.forEach(change => {
     // Find keyword changes in this comment
-    const changeItems = change.querySelectorAll('ul.changes li');
+    const changeItems = change.querySelectorAll('ul.changes li.trac-field-keywords');
     changeItems.forEach(item => {
-      const text = item.textContent;
+      // Get all <em> tags (keywords) within this change item
+      const keywordTags = item.querySelectorAll('em');
 
-      // Look for "Keywords something added" or "Keywords something removed"
-      if (text.includes('Keywords') && (text.includes('added') || text.includes('removed'))) {
-        // Extract the action and keyword(s)
-        const match = text.match(/Keywords?\s+(.+?)\s+(added|removed)/);
-        if (match) {
-          const keywordStr = match[1].trim();
-          const action = match[2];
-          const keywords = keywordStr.split(/\s+/);
+      keywordTags.forEach(emTag => {
+        const keyword = emTag.textContent.trim();
+        // Get the text after the <em> tag to determine if it was added or removed
+        const nextText = emTag.nextSibling ? emTag.nextSibling.textContent : '';
+
+        let action = null;
+        if (nextText.includes('added')) {
+          action = 'added';
+        } else if (nextText.includes('removed')) {
+          action = 'removed';
+        }
+
+        if (action) {
+          const keywords = [keyword];
 
           // Get comment link and date
           const commentId = change.id; // e.g., "comment:1"
@@ -572,7 +579,7 @@ function extractKeywordHistory() {
             }
           });
         }
-      }
+      });
     });
   });
 
@@ -711,6 +718,111 @@ function analyzeKeywordValidation() {
   }
 
   return validationIssues;
+}
+
+// Helper: Extract keyword change timeline (chronological)
+function extractKeywordChangeTimeline() {
+  const timeline = [];
+  const changes = document.querySelectorAll('.change');
+
+  // Get contributor data
+  const dataElement = document.getElementById('wpt-contributor-data');
+  let wpTracContributorLabels = {};
+  if (dataElement) {
+    try {
+      wpTracContributorLabels = JSON.parse(dataElement.getAttribute('data-contributors'));
+    } catch (e) {
+      // Fallback to empty object
+    }
+  }
+
+  changes.forEach(change => {
+    // Find keyword changes in this comment
+    const changeItems = change.querySelectorAll('ul.changes li.trac-field-keywords');
+    const keywordChanges = { added: [], removed: [] };
+
+    changeItems.forEach(item => {
+      // Get all <em> tags (keywords) within this change item
+      const keywordTags = item.querySelectorAll('em');
+
+      keywordTags.forEach(emTag => {
+        const keyword = emTag.textContent.trim();
+        // Get the text after the <em> tag to determine if it was added or removed
+        const nextText = emTag.nextSibling ? emTag.nextSibling.textContent : '';
+
+        if (nextText.includes('added')) {
+          keywordChanges.added.push(keyword);
+        } else if (nextText.includes('removed')) {
+          keywordChanges.removed.push(keyword);
+        }
+      });
+    });
+
+    // If we found keyword changes, add to timeline
+    if (keywordChanges.added.length > 0 || keywordChanges.removed.length > 0) {
+      // Extract author - need to get just the username, excluding our badge elements
+      const authorElement = change.querySelector('.trac-author');
+      let author = 'Unknown';
+
+      if (authorElement) {
+        const usernameSpan = authorElement.querySelector('.username');
+        if (usernameSpan) {
+          author = usernameSpan.textContent.trim();
+        } else {
+          const cleanAuthor = authorElement.cloneNode(true);
+          const badges = cleanAuthor.querySelectorAll('.wpt-role-badge, .wpt-github-badge');
+          badges.forEach(badge => badge.remove());
+          const fullText = cleanAuthor.textContent.trim();
+          author = fullText.replace(/\s*(Core Committer|Lead Developer|Emeritus Committer|Component Maintainer|Lead Tester|Themes Committer|Project Lead|Individual Contributor).*$/, '');
+        }
+      }
+
+      const authorRole = wpTracContributorLabels[author] || 'Individual Contributor';
+
+      // Extract relative time
+      let relativeTime = 'unknown';
+      const dateDiv = change.querySelector('.date');
+      if (dateDiv) {
+        const timelineLink = dateDiv.querySelector('.timeline');
+        if (timelineLink) {
+          relativeTime = timelineLink.textContent.trim();
+        }
+      }
+
+      if (relativeTime === 'unknown') {
+        const timeSpan = change.querySelector('.trac-time, .time-ago, [title*="ago"]');
+        if (timeSpan) {
+          relativeTime = timeSpan.textContent.trim();
+        }
+      }
+
+      if (relativeTime === 'unknown') {
+        const changeHeader = change.querySelector('h3.change');
+        if (changeHeader) {
+          const headerText = changeHeader.textContent;
+          const timeMatch = headerText.match(/(\d+\s+(?:years?|months?|days?|hours?|minutes?)\s+ago)/);
+          if (timeMatch) {
+            relativeTime = timeMatch[1];
+          }
+        }
+      }
+
+      // Extract comment link
+      const commentId = change.id;
+      const commentLink = commentId ? `#${commentId}` : '';
+
+      timeline.push({
+        added: keywordChanges.added,
+        removed: keywordChanges.removed,
+        author: author,
+        authorRole: authorRole,
+        relativeTime: relativeTime,
+        commentId: commentLink
+      });
+    }
+  });
+
+  return timeline.reverse(); // Oldest first for timeline
 }
 
 // Helper: Extract milestone change history
@@ -991,10 +1103,11 @@ function getSectionOrder(config) {
       'release-schedule': 1,
       'recent-comments': 2,
       'milestone-timeline': 3,
-      'authority-legend': 4,
-      'maintainers': 5,
-      'keyword-validation': 6,
-      'keywords': 7
+      'keyword-history': 4,
+      'authority-legend': 5,
+      'maintainers': 6,
+      'keyword-validation': 7,
+      'keywords': 8
     };
   }
 
@@ -1774,6 +1887,109 @@ function continueCreatingSidebar(contributorData, config, sectionOrder) {
         order: sectionOrder['milestone-timeline'] || 3
       });
       debug('Milestone history timeline added to array');
+    }
+  }
+
+  // Section 4.5: Keyword Change History Timeline
+  if (isSectionEnabled('keyword-history', config)) {
+    const keywordTimeline = extractKeywordChangeTimeline();
+    debug('Keyword change timeline extracted:', keywordTimeline.length, 'changes');
+    if (keywordTimeline.length > 0) {
+      const keywordTimelineSection = createCollapsibleSection('keyword-history', 'Keyword Change History', '🔄', true);
+
+      const timelineContent = document.createElement('div');
+      timelineContent.style.cssText = 'margin-top: 10px; position: relative; padding: 10px 0;';
+
+      const timelineLine = document.createElement('div');
+      timelineLine.style.cssText = `
+        position: absolute;
+        left: 10px;
+        top: 15px;
+        bottom: 15px;
+        width: 2px;
+        background: #ddd;
+      `;
+      timelineContent.appendChild(timelineLine);
+
+      keywordTimeline.forEach((change, index) => {
+        const changeDiv = document.createElement('div');
+        changeDiv.style.cssText = `
+          padding-left: 30px;
+          margin-bottom: 15px;
+          position: relative;
+        `;
+
+        // Determine dot color based on action type
+        let dotColor = '#2196F3'; // Default blue
+        if (change.added.length > 0 && change.removed.length === 0) {
+          dotColor = '#4CAF50'; // Green for additions only
+        } else if (change.added.length === 0 && change.removed.length > 0) {
+          dotColor = '#f44336'; // Red for removals only
+        } else if (change.added.length > 0 && change.removed.length > 0) {
+          dotColor = '#FF9800'; // Orange for mixed
+        }
+
+        const dot = document.createElement('div');
+        dot.style.cssText = `
+          position: absolute;
+          left: 5px;
+          top: 5px;
+          width: 12px;
+          height: 12px;
+          border-radius: 50%;
+          background: ${dotColor};
+          border: 2px solid white;
+          box-shadow: 0 0 0 1px #ddd;
+        `;
+        changeDiv.appendChild(dot);
+
+        const contentBox = document.createElement('div');
+        contentBox.style.cssText = `
+          background: #fafafa;
+          padding: 8px;
+          border-radius: 4px;
+          font-size: 12px;
+        `;
+
+        // Build keyword changes HTML
+        let changesHtml = '<div style="margin-bottom: 4px;">';
+
+        if (change.added.length > 0) {
+          const addedKeywords = change.added.map(kw =>
+            `<span style="background: #e8f5e9; color: #2e7d32; padding: 2px 6px; border-radius: 3px; font-weight: 600; margin-right: 4px;">+ ${kw}</span>`
+          ).join('');
+          changesHtml += addedKeywords;
+        }
+
+        if (change.removed.length > 0) {
+          const removedKeywords = change.removed.map(kw =>
+            `<span style="background: #ffebee; color: #c62828; padding: 2px 6px; border-radius: 3px; font-weight: 600; margin-right: 4px;">- ${kw}</span>`
+          ).join('');
+          changesHtml += removedKeywords;
+        }
+
+        changesHtml += '</div>';
+
+        contentBox.innerHTML = `
+          ${changesHtml}
+          <div style="color: #666; font-size: 11px;">
+            by <strong>${change.author}</strong> <span style="color: ${getRoleColor(change.authorRole)};">(${change.authorRole})</span>
+            <span style="color: #999;"> • ${change.relativeTime}</span>
+          </div>
+          ${change.commentId ? `<a href="${change.commentId}" style="font-size: 10px; color: #2196F3; text-decoration: none;">View comment →</a>` : ''}
+        `;
+
+        changeDiv.appendChild(contentBox);
+        timelineContent.appendChild(changeDiv);
+      });
+
+      keywordTimelineSection.contentWrapper.appendChild(timelineContent);
+      sectionsToRender.push({
+        id: 'keyword-history',
+        element: keywordTimelineSection.container,
+        order: sectionOrder['keyword-history'] || 3.5
+      });
+      debug('Keyword change history timeline added to array');
     }
   }
 

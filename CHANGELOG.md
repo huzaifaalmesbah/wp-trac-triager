@@ -5,6 +5,55 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-02-09
+
+### Added - Keyword Change History Timeline
+
+#### Pure Visibility Feature
+- **Chronological Keyword Timeline**: New visual timeline showing the complete history of all keyword additions and removals on a ticket
+- **Color-Coded Changes**: Visual differentiation between additions (green), removals (red), and mixed changes (orange)
+- **Author Context**: Each change displays who made it, their role, and when (relative time)
+- **Direct Navigation**: Click-through links to view the exact comment where keywords were changed
+- **No Judgments**: Shows only factual information - no validation, no suggestions, just the timeline of what happened
+
+#### Visual Design
+- Vertical timeline with connecting line (similar to Milestone History)
+- Color-coded dots indicating change type:
+  - 🟢 Green: Keywords added only
+  - 🔴 Red: Keywords removed only
+  - 🟠 Orange: Mixed (both added and removed)
+  - 🔵 Blue: Default
+- Inline keyword badges with + (addition) or - (removal) prefix
+- Role-based color coding for author information
+- Chronological order from oldest to newest
+
+#### Technical Implementation
+- **New Function**: `extractKeywordChangeTimeline()` - Extracts all keyword changes with author, role, and timestamp
+- **Improved Parsing**: Uses DOM-based extraction via `<em>` tags instead of regex for accurate keyword detection
+- **Section Integration**: New configurable sidebar section "Keyword Change History" (🔄)
+- **Order Position**: Defaults to position 4 (after Milestone History, before Authority Legend)
+- **User Configurable**: Can be reordered or hidden via Settings → Sidebar Section Manager
+- **Storage Updates**: Updated default section order in both `trac-sidebar.js` and `options.js`
+- **Enhanced Reliability**: Both `extractKeywordHistory()` and `extractKeywordChangeTimeline()` now use `.trac-field-keywords` selector with `<em>` tag parsing
+
+#### Use Cases
+- **Understand Evolution**: See how a ticket's keywords evolved over time
+- **Identify Patterns**: Notice who typically adds/removes which keywords
+- **Context for Decisions**: Review the full history before making triage decisions
+- **Learning Tool**: New contributors can learn proper keyword workflows by observing patterns
+
+### Changed
+- **Section Ordering**: Updated default section order to accommodate new Keyword History section
+  - Milestone History: 3
+  - **Keyword Change History: 4** (NEW)
+  - Authority Legend: 5 (was 4)
+  - Component Maintainers: 6 (was 5)
+  - Keyword Validation: 7 (was 6)
+  - TRAC Keywords: 8 (was 7)
+
+### Philosophy
+This feature focuses purely on **information visibility** rather than recommendations. It helps users make informed decisions based on complete context, without telling them what to do. The extension continues to prioritize empowering contributors with data while respecting their judgment.
+
 ## [1.4.0] - 2026-02-06
 
 ### Added - Sidebar Section Manager
