@@ -48,6 +48,10 @@ document.addEventListener('wpt-data-ready', function() {
 function highlightContributors(wpTracContributorLabels) {
   const comments = document.querySelectorAll('.change');
 
+  // Ticket reporter (from ticket property table) – highlight their comments too
+  const reporterLink = document.querySelector('#ticket td[headers="h_reporter"] a.trac-author');
+  const reporterUsername = reporterLink ? reporterLink.textContent.trim() : '';
+
   // Color scheme for different roles
   const roleColors = {
     'Project Lead': { border: '#9C27B0', bg: '#F3E5F5', badge: '#9C27B0' }, // Purple
@@ -56,6 +60,7 @@ function highlightContributors(wpTracContributorLabels) {
     'Emeritus Committer': { border: '#FF9800', bg: '#FFF3E0', badge: '#FF9800' }, // Orange
     'Lead Tester': { border: '#E91E63', bg: '#FCE4EC', badge: '#E91E63' }, // Pink
     'Themes Committer': { border: '#00BCD4', bg: '#E0F7FA', badge: '#00BCD4' }, // Cyan
+    'Reporter': { border: '#795548', bg: '#EFEBE9', badge: '#795548' }, // Brown (reporter)
     'default': { border: '#607D8B', bg: '#ECEFF1', badge: '#607D8B' } // Gray
   };
 
@@ -68,10 +73,16 @@ function highlightContributors(wpTracContributorLabels) {
 
     const username = authorLink.textContent.trim();
 
-    // Only highlight and badge core team members
-    if (!wpTracContributorLabels[username]) return;
+    // Resolve role: Reporter (ticket author) first, then core team
+    let role = null;
+    if (reporterUsername && username === reporterUsername) {
+      role = 'Reporter';
+    }
+    if (!role && wpTracContributorLabels[username]) {
+      role = wpTracContributorLabels[username];
+    }
+    if (!role) return;
 
-    const role = wpTracContributorLabels[username];
     const colors = roleColors[role] || roleColors['default'];
 
     // Count role appearances for legend (core team only)
@@ -991,7 +1002,8 @@ function getRoleColor(role) {
     'Component Maintainer': '#009688',
     'Lead Tester': '#e91e63',
     'Themes Committer': '#00bcd4',
-    'Individual Contributor': '#757575'
+    'Individual Contributor': '#757575',
+    'Reporter': '#795548'
   };
   return colors[role] || '#757575';
 }
